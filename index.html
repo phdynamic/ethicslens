@@ -260,29 +260,49 @@
 
   .loading-container {
     text-align: center;
-    padding: 3rem 1rem;
+    padding: 3rem 1.5rem;
     display: none;
   }
 
   .loading-container.visible { display: block; }
 
-  .loading-spinner {
-    width: 36px;
-    height: 36px;
-    border: 2px solid var(--border-subtle);
-    border-top-color: var(--accent-warm);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1.25rem;
+  .loading-stage-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent-warm);
+    margin-bottom: 1.25rem;
+    opacity: 0.8;
   }
 
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-track {
+    width: 100%;
+    max-width: 400px;
+    height: 4px;
+    background: var(--bg-card);
+    border-radius: 2px;
+    margin: 0 auto 1.5rem;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-warm), var(--accent-cool));
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
   .loading-text {
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: var(--text-secondary);
     font-style: italic;
+    min-height: 1.8em;
+    transition: opacity 0.3s ease;
   }
+
+  .loading-text.fading { opacity: 0; }
 
   .results { display: none; }
 
@@ -572,8 +592,11 @@
   </div>
 
   <div class="loading-container" id="loading">
-    <div class="loading-spinner"></div>
-    <div class="loading-text">Examining through multiple ethical lenses...</div>
+    <div class="loading-stage-label">Analyzing</div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="loading-text" id="loadingText"></div>
   </div>
 
   <div class="results" id="results"></div>
@@ -592,11 +615,64 @@
   // CONFIGURATION — Set this to your Cloudflare Worker URL
   // after deploying worker.js
   // ============================================================
-  const WORKER_URL = 'https://ethicslens-proxy.normand-theriault.workers.dev';
+  const WORKER_URL = 'https://ethicslens-proxy.YOUR-SUBDOMAIN.workers.dev';
   // ============================================================
 
   let mode = 'url';
   const colors = ['warm', 'cool', 'rose', 'green', 'violet', 'amber'];
+
+  // Progress bar
+  const PROGRESS_STAGES = [
+    { pct: 12, text: 'Reading the situation...' },
+    { pct: 25, text: 'Identifying ethical stakes...' },
+    { pct: 38, text: 'Consulting Aristotle...' },
+    { pct: 48, text: 'Weighing consequences with Mill...' },
+    { pct: 58, text: 'Testing the categorical imperative...' },
+    { pct: 68, text: 'Questioning values with Nietzsche...' },
+    { pct: 76, text: 'Considering freedom with de Beauvoir...' },
+    { pct: 84, text: 'Mapping the tensions...' },
+    { pct: 90, text: 'Formulating questions for you...' },
+    { pct: 94, text: 'Almost there...' },
+  ];
+
+  let progressTimer = null;
+
+  function startProgress() {
+    const fill = document.getElementById('progressFill');
+    const text = document.getElementById('loadingText');
+    fill.style.width = '0%';
+    text.textContent = '';
+    text.classList.remove('fading');
+
+    let stageIndex = 0;
+
+    function nextStage() {
+      if (stageIndex >= PROGRESS_STAGES.length) return;
+      const stage = PROGRESS_STAGES[stageIndex];
+
+      // Fade out old text
+      text.classList.add('fading');
+      setTimeout(() => {
+        text.textContent = stage.text;
+        text.classList.remove('fading');
+      }, 300);
+
+      fill.style.width = stage.pct + '%';
+      stageIndex++;
+
+      // Variable timing: faster at start, slower toward end
+      const delay = 1200 + (stageIndex * 300) + (Math.random() * 800);
+      progressTimer = setTimeout(nextStage, delay);
+    }
+
+    nextStage();
+  }
+
+  function finishProgress() {
+    clearTimeout(progressTimer);
+    const fill = document.getElementById('progressFill');
+    fill.style.width = '100%';
+  }
 
   function setMode(m) {
     mode = m;
@@ -630,6 +706,7 @@
     document.getElementById('loading').classList.add('visible');
     document.getElementById('results').classList.remove('visible');
     document.getElementById('errorMsg').classList.remove('visible');
+    startProgress();
 
     try {
       const response = await fetch(WORKER_URL, {
@@ -644,9 +721,13 @@
       }
 
       const result = await response.json();
+      finishProgress();
+      // Brief pause so the user sees 100% before results appear
+      await new Promise(r => setTimeout(r, 500));
       renderResults(result);
     } catch (err) {
       console.error(err);
+      finishProgress();
       showError(err.message || 'Something went wrong. Please try again.');
       document.getElementById('inputArea').style.display = 'block';
       document.getElementById('examplesSection').style.display = 'block';
