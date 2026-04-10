@@ -2,7 +2,13 @@
    EthicsLens — Application Logic
    ============================================================ */
 
-const API_URL = '/api/analyze';
+// When hosted on the Cloudflare Worker, use the relative path.
+// Otherwise (e.g. GitHub Pages), call the worker's absolute URL.
+const WORKER_ORIGIN = 'https://ethicslens-proxy.normand-theriault.workers.dev';
+const API_URL =
+  window.location.origin === WORKER_ORIGIN
+    ? '/api/analyze'
+    : WORKER_ORIGIN + '/api/analyze';
 const FETCH_TIMEOUT = 90000; // 90 seconds
 const MAX_RETRIES = 1;
 
