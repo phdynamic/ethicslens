@@ -1,5 +1,5 @@
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-6-20250514';
+const MODEL = 'claude-sonnet-5-5';
 
 const SYSTEM_PROMPT = `You are EthicsLens, a philosophical analysis tool designed for students of ethics. Given a news headline, topic, or article text, you analyze it through multiple ethical frameworks.
 
