@@ -88,19 +88,23 @@ async function fetchArticleContent(url) {
   }
 }
 
-async function analyzeWithClaude(content, mode, apiKey) {
+async function analyzeWithClaude(content, mode, apiKey, workspaceId) {
   const userMessage =
     mode === 'url'
       ? `Analyze the ethical dimensions of this article:\n\n${content}`
       : `Analyze the ethical dimensions of this topic or headline:\n\n${content}`;
 
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+  };
+  // Only needed for API keys that are not scoped to a workspace.
+  if (workspaceId) headers['anthropic-workspace-id'] = workspaceId;
+
   const response = await fetch(ANTHROPIC_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
+    headers,
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 4096,
@@ -157,7 +161,12 @@ async function handleAnalyze(request, env) {
       content = await fetchArticleContent(input);
     }
 
-    const result = await analyzeWithClaude(content, mode, apiKey);
+    const result = await analyzeWithClaude(
+      content,
+      mode,
+      apiKey,
+      env.ANTHROPIC_WORKSPACE_ID,
+    );
 
     // Attach source URL if the input was a URL
     if (mode === 'url') {

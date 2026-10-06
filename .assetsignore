@@ -1,0 +1,16 @@
+# Keep everything except the static site (index.html, styles.css, app.js)
+# out of the Workers asset upload.
+node_modules
+.git
+.github
+.wrangler
+src
+package.json
+package-lock.json
+bun.lock
+bun.lockb
+wrangler.jsonc
+.dev.vars*
+.env*
+.gitignore
+.assetsignore
